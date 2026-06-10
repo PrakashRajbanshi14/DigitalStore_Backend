@@ -3,6 +3,8 @@ import User from "../database/models/userModel";
 import sequelize from "../database/connection";
 import bcrypt from "bcrypt"
 import generateToken from "../services/generateToken";
+import generateOtp from "../services/generateOtp";
+import sendMail from "../services/sendMail";
 
 
 class UserController {
@@ -67,6 +69,35 @@ class UserController {
             }
         }
 
+    }
+
+    static async handleForgotPassword (req: Request, res:Response){
+        const {email} = req.body;
+        if(!email){
+            res.status(400).json({message : "Please Provide an Email!"})
+            return
+        }
+        const [user] = await User.findAll({
+            where : {
+                email: email
+            }
+        })
+        if(!user){
+            res.status(404).json({
+                email : "Email Not Registered"
+            })
+            return 
+        }
+
+        const otp = generateOtp()
+        await sendMail({
+            to: email,
+            subject: "Digital Store Password Reset Request",
+            text: `You just request to reset your password. Here is your OTP : ${otp}`
+        })
+        res.status(200).json({
+            message: "OTP sent successfully"
+        })
     }
 }
 
