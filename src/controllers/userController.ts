@@ -24,7 +24,11 @@ class UserController {
             password: bcrypt.hashSync(password, 10),
 
         })
-
+        await sendMail({
+            to: email,
+            subject: "Registration Successfull",
+            text: `Welcome to Digital Store`
+        })
         res.status(201).json({
             message: "User registered successfully"
         })
@@ -95,6 +99,9 @@ class UserController {
             subject: "Digital Store Password Reset Request",
             text: `You just request to reset your password. Here is your OTP : ${otp}`
         })
+        user.otp = otp.toString()
+        user.otpGeneratedTime = Date.now().toString()
+        await user.save()
         res.status(200).json({
             message: "OTP sent successfully"
         })
