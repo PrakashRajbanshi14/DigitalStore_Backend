@@ -24,7 +24,7 @@ sequelize.sync({ force: false, alter: false })  // alter : true helps to keep th
 })
 
 // relationships
-Product.belongsTo(Category)  // in product table categoryid as a foreign key will be stored
-Category.hasOne(Product)
+Product.belongsTo(Category,{foreignKey: "categoryId"})  // in product table categoryid as a foreign key will be stored
+Category.hasOne(Product,{foreignKey: "categoryId"})
 
 export default sequelize;
