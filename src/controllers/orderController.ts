@@ -3,6 +3,7 @@ import Order from "../database/models/orderModel";
 import OrderDetails from "../database/models/orderDetails";
 import { PaymentMethod } from "../globals/types";
 import Payment from "../database/models/paymentModel";
+import axios from "axios"
 
 interface Iproduct{
     productId : string,
@@ -44,20 +45,34 @@ class OrderController{
             })
         })
         //for paymentModel
-        if(paymentMethod == PaymentMethod.COD){
-            await Payment.create({
+        const paymentData = await Payment.create({
                 orderId : orderData.id,
                 paymentMethod: paymentMethod
+        })
+        if(paymentMethod == paymentMethod.khalti){
+            // khalti logic for test integration
+            const data = {
+                return_url : "http://localhost:5173/",
+                website_URL : "http://localhost:5173/",
+                amount : totalAmount *100, // in paisa
+                purchase_order_id : orderData.id,
+                purchase_order_name : "order_" + orderData.id
+            }
+            const response = await axios.post("https://dev.khalti.com/api/v2/epayment/initiate/", data, {
+                headers : {
+                    Authorization : "key 69e6251ff9df4c14bba4a50e70df4640"
+                }
             })
-        }else if(paymentMethod == paymentMethod.khalti){
-
-
+            const khaltiResponse = response.data;
+            paymentData.pidx = khaltiResponse.pidx
+            paymentData.save()
+            res.status(200).json({
+                message : "Order Created Successfully!",
+                url : khaltiResponse.payment_url
+            })
         }else{
 
         }
-        res.status(200).json({
-            message : "Order Created Successfully!"
-        })
     }
 
 }
