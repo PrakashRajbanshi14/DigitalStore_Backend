@@ -5,6 +5,7 @@ import categoryController from "./src/controllers/categoryController";
 import { Server } from 'socket.io'
 import jwt from 'jsonwebtoken'
 import User from "./src/database/models/userModel";
+import Order from "./src/database/models/orderModel";
 
 function startServer() {
     const port = envConfig.port || 3000
@@ -26,10 +27,10 @@ function startServer() {
         onlineUsers.push({socketId,userId,role})
     }
     io.on("connection", (socket) => {
-        const { token } = socket.handshake.auth // jwt token
+        const token  = socket.handshake.headers.token // jwt token
         if (token) {
             jwt.verify(
-                token,
+                token as string,
                 envConfig.jwtSecretKey as string,
                 async (err:any, result: any) => {
                     if (err) {
@@ -49,6 +50,25 @@ function startServer() {
         } else {
             socket.emit("error", "Authentication token missing")
         }
+        socket.on("updateOrderStatus",async  (data)=> {
+            const {status, orderId, userId} = data
+            const finduser = onlineUsers.find(user=> user.userId == userId)
+            await Order.update(
+                {
+                    orderStatus : status
+                },
+               {
+                 where : {
+                    id : orderId
+                }
+               } 
+            )
+            if(finduser){
+                io.to(finduser.socketId).emit("success", "Order status updated")
+            }else{
+                socket.emit("error", "User is not Online!")
+            }
+        })
     })
 }
 
