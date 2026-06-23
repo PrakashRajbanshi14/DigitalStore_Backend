@@ -6,8 +6,13 @@ import productRoute from './routes/productRoute'
 import orderRoute from "./routes/orderRoute"
 import cartRoute from "./routes/cartRoute"
 import "./database/connection"
+import cors from "cors"
 
 app.use(express.json())
+
+app.use(cors({
+    origin : "*"
+}))
 
 app.use("/api/auth", userRoute)
 app.use('/api/category', categoryRoute)
