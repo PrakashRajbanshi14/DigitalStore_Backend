@@ -9,6 +9,7 @@ import "./database/connection"
 import cors from "cors"
 
 app.use(express.json())
+app.use(express.static("./src/uploads"))
 
 app.use(cors({
     origin : "*"
