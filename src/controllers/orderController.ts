@@ -21,9 +21,9 @@ interface OrderRequest extends Request{
 class OrderController{
     async createOrder(req: OrderRequest, res : Response):Promise<void>{
         const userId = req.user.id;
-        const {phoneNumber, shippingAddress, totalAmount, paymentMethod} = req.body;
+        const {phoneNumber, firstName, lastName, email, shippingAddress, totalAmount, paymentMethod} = req.body;
         const products:Iproduct[] = req.body.products
-        if(!phoneNumber || !shippingAddress || !totalAmount || products.length == 0){
+        if(!firstName || !lastName || !email ||  !phoneNumber || !shippingAddress || !totalAmount || products.length == 0){
             res.status(400).json({
                 message : "Some fields are missing!"
             })
@@ -34,7 +34,10 @@ class OrderController{
             phoneNumber,
             shippingAddress,
             totalAmount,
-            userId : userId
+            userId : userId,
+            firstName,
+            lastName,
+            email
         })
         //for orderDetails
         products.forEach(async function(product){
