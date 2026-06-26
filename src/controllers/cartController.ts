@@ -88,24 +88,19 @@ class CartController{
     async deleteMyCartItem(req : AuthRequest, res: Response):Promise<void>{
         const userId = req.user?.id
         const {productId} = req.params
-        //check if product exist or not
-        const product = await Product.findAll({
-            where : {
-                productId
-            }
-        })
-        if(!product){
-            res.status(404).json({
-                message : "No Product With that Id"
-            })
-            return
-        }
-        await Cart.destroy({
+        const cartItem = await Cart.findOne({
             where : {
                 productId,
                 userId
             }
         })
+        if(!cartItem){
+            res.status(404).json({
+                message : "No Product with that Id in cart"
+            })
+            return
+        }
+        await cartItem.destroy()
         res.status(200).json({
             message : "Product from cart deleted successfully!"
         })
