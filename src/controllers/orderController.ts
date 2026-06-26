@@ -4,6 +4,7 @@ import OrderDetails from "../database/models/orderDetails";
 import { PaymentMethod, PaymentStatus } from "../globals/types";
 import Payment from "../database/models/paymentModel";
 import axios from "axios"
+import Cart from "../database/models/cartModel";
 
 interface Iproduct{
     productId : string,
@@ -21,9 +22,9 @@ interface OrderRequest extends Request{
 class OrderController{
     async createOrder(req: OrderRequest, res : Response):Promise<void>{
         const userId = req.user.id;
-        const {phoneNumber, firstName, lastName, email, shippingAddress, totalAmount, paymentMethod} = req.body;
+        const {phoneNumber, firstName, lastName, email, state, city, zipCode, addressLine, totalAmount, paymentMethod} = req.body;
         const products:Iproduct[] = req.body.products
-        if(!firstName || !lastName || !email ||  !phoneNumber || !shippingAddress || !totalAmount || products.length == 0){
+        if(!firstName || !lastName || !email || !state || !zipCode || !city ||  !phoneNumber || !addressLine || !totalAmount || products.length == 0){
             res.status(400).json({
                 message : "Some fields are missing!"
             })
@@ -32,19 +33,30 @@ class OrderController{
         //for orderModel
         const orderData = await Order.create({
             phoneNumber,
-            shippingAddress,
+            addressLine,
             totalAmount,
             userId : userId,
             firstName,
             lastName,
-            email
+            email,
+            city,
+            state,
+            zipCode
         })
         //for orderDetails
+         let data;
         products.forEach(async function(product){
-            await OrderDetails.create({
+             data = await OrderDetails.create({
                 quantity : product.productQty,
                 productId : product.productId,
                 orderId : orderData.id
+            })
+
+            await Cart.destroy({
+                where: {
+                    productId: product.productId,
+                    userId : userId
+                }
             })
         })
         //for paymentModel
@@ -71,14 +83,17 @@ class OrderController{
             paymentData.save()
             res.status(200).json({
                 message : "Order Created Successfully!",
-                url : khaltiResponse.payment_url
+                url : khaltiResponse.payment_url,
+                pidx: khaltiResponse.pidx,
+                data
             })
         }else if(paymentMethod == PaymentMethod.Esewa){
             // ESEWA logic
 
         }else{
             res.status(200).json({
-                message : "Order created successfully"
+                message : "Order created successfully",
+                data
             })
         }
     }
