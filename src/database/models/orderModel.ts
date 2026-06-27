@@ -35,19 +35,16 @@ class Order extends Model{
 
     @Column({
         type : DataType.STRING, 
-        allowNull : false
     })
     declare city : string 
 
     @Column({
         type : DataType.STRING, 
-        allowNull : false
     })
     declare state : string 
 
     @Column({
         type : DataType.STRING, 
-        allowNull : false
     })
     declare zipCode : string 
 

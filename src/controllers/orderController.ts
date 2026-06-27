@@ -6,36 +6,39 @@ import Payment from "../database/models/paymentModel";
 import axios from "axios"
 import Cart from "../database/models/cartModel";
 
-interface Iproduct{
-    productId : string,
-    productQty : string
+interface Iproduct {
+    productId: string,
+    productQty: string
 }
 
-interface OrderRequest extends Request{
-    user : {
-        id : string
+interface OrderRequest extends Request {
+    user: {
+        id: string
     }
 }
 
 
 
-class OrderController{
-    async createOrder(req: OrderRequest, res : Response):Promise<void>{
+class OrderController {
+    async createOrder(req: OrderRequest, res: Response): Promise<void> {
         const userId = req.user.id;
-        const {phoneNumber, firstName, lastName, email, state, city, zipCode, addressLine, totalAmount, paymentMethod} = req.body;
-        const products:Iproduct[] = req.body.products
-        if(!firstName || !lastName || !email || !state || !zipCode || !city ||  !phoneNumber || !addressLine || !totalAmount || products.length == 0){
+        const { phoneNumber, firstName, lastName, email, state, city, zipCode, addressLine, totalAmount, paymentMethod } = req.body;
+        const products: Iproduct[] = req.body.products
+        console.log(req.body);
+
+        if (!firstName || !lastName || !email || !state || !zipCode || !city || !phoneNumber || !addressLine || !totalAmount || products.length == 0) {
             res.status(400).json({
-                message : "Some fields are missing!"
+                message: "Some fields are missing!"
             })
             return
         }
         //for orderModel
+
         const orderData = await Order.create({
             phoneNumber,
             addressLine,
             totalAmount,
-            userId : userId,
+            userId: userId,
             firstName,
             lastName,
             email,
@@ -43,91 +46,99 @@ class OrderController{
             state,
             zipCode
         })
-        //for orderDetails
-         let data;
-        products.forEach(async function(product){
-             data = await OrderDetails.create({
-                quantity : product.productQty,
-                productId : product.productId,
-                orderId : orderData.id
+
+        // for orderDetails - use for...of to handle async/await properly
+        let data;
+        for (const product of products) {
+            data = await OrderDetails.create({
+                quantity: product.productQty,
+                productId: product.productId,
+                orderId: orderData.id
             })
 
             await Cart.destroy({
                 where: {
                     productId: product.productId,
-                    userId : userId
+                     userId: userId
                 }
             })
-        })
-        //for paymentModel
+        }
         const paymentData = await Payment.create({
-                orderId : orderData.id,
-                paymentMethod: paymentMethod
+            orderId: orderData.id,
+            paymentMethod: paymentMethod
         })
-        if(paymentMethod == paymentMethod.khalti){
+
+        if (paymentMethod === PaymentMethod.Khalti) {
+
             // khalti logic for test integration
             const data = {
-                return_url : "http://localhost:5173/",
-                website_URL : "http://localhost:5173/",
-                amount : totalAmount *100, // in paisa
-                purchase_order_id : orderData.id,
-                purchase_order_name : "order_" + orderData.id
+                return_url: "http://localhost:5173/",
+                website_url: "http://localhost:5173/",
+                amount: totalAmount * 100,
+                purchase_order_id: orderData.id,
+                purchase_order_name: "order_" + orderData.id
             }
             const response = await axios.post("https://dev.khalti.com/api/v2/epayment/initiate/", data, {
-                headers : {
-                    Authorization : "key 69e6251ff9df4c14bba4a50e70df4640"
+                headers: {
+                    Authorization: "Key 69e6251ff9df4c14bba4a50e70df4640",
                 }
             })
-            const khaltiResponse = response.data;
+            const khaltiResponse = response.data
             paymentData.pidx = khaltiResponse.pidx
-            paymentData.save()
+            await paymentData.save()
             res.status(200).json({
-                message : "Order Created Successfully!",
-                url : khaltiResponse.payment_url,
+                message: "Order created successfully",
+                url: khaltiResponse.payment_url,
                 pidx: khaltiResponse.pidx,
                 data
             })
-        }else if(paymentMethod == PaymentMethod.Esewa){
+            return;
+        } else if (paymentMethod === PaymentMethod.Esewa) {
             // ESEWA logic
 
-        }else{
+        }
+        else {
             res.status(200).json({
-                message : "Order created successfully",
+                message: "Order created successfully",
                 data
             })
+            return;
         }
     }
 
-    async verifyTransaction(req : OrderRequest, res : Response):Promise<void>{
-        const {pidx} = req.body
-         if(!pidx){
-        res.status(400).json({
-          message : "Please provide pidx"
-        })
-        return
-      }
-      const response = await axios.post("https://a.khalti.com/api/v2/epayment/lookup/",{
-        pidx : pidx
-      },{
-        headers : {
-          "Authorization" : "key 69e6251ff9df4c14bba4a50e70df4640"
+
+
+
+    async verifyTransaction(req: OrderRequest, res: Response): Promise<void> {
+        const { pidx } = req.body
+        if (!pidx) {
+            res.status(400).json({
+                message: "Please provide pidx"
+            })
+            return
         }
-      })
-      const data = response.data 
-      if(data.status === "Completed"){
-        await Payment.update({paymentStatus : PaymentStatus.Paid},{
-          where : {
-            pidx : pidx 
-          }
+        const response = await axios.post("https://a.khalti.com/api/v2/epayment/lookup/", {
+            pidx: pidx
+        }, {
+            headers: {
+                "Authorization": "Key 69e6251ff9df4c14bba4a50e70df4640"
+            }
         })
-        res.status(200).json({
-          message : "Payment verified successfully !!"
-        })
-      }else{
-        res.status(200).json({
-          message : "Payment not verified or cancelled"
-        })
-      }
+        const data = response.data
+        if (data.status === "Completed") {
+            await Payment.update({ paymentStatus: PaymentStatus.Paid }, {
+                where: {
+                    pidx: pidx
+                }
+            })
+            res.status(200).json({
+                message: "Payment verified successfully !!"
+            })
+        } else {
+            res.status(200).json({
+                message: "Payment not verified or cancelled"
+            })
+        }
     }
 }
 
