@@ -26,7 +26,7 @@ class Payment extends Model {
         type: DataType.ENUM(PaymentStatus.Paid,PaymentStatus.Unpaid),
         defaultValue : PaymentStatus.Unpaid
     })
-    declare paymentstatus : string
+    declare paymentStatus : string
 
     @Column({
         type : DataType.STRING

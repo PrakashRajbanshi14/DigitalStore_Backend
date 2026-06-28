@@ -37,17 +37,17 @@ Category.hasOne(Product,{foreignKey: "categoryId"})
 User.hasMany(Order, {foreignKey: "userId"})
 Order.belongsTo(User,{foreignKey: "userId"})
 
-//  orderId on PaymentTable
-Payment.belongsTo(Order, {foreignKey: "orderId"})
-Order.hasOne(Payment, {foreignKey: "orderId"})
+//  paymentId on ordertable
+Order.belongsTo(Payment, {foreignKey: "paymentId"})
+Payment.hasOne(Order, {foreignKey: "paymentId"})
 
 // productId on OrderDetailsTable
-OrderDetails.belongsTo(Product,{foreignKey: "productid"})
+OrderDetails.belongsTo(Product,{foreignKey: "productId"})
 Product.hasMany(OrderDetails, {foreignKey: "productId"})
 
 // orderId on OrderDetails Table
 OrderDetails.belongsTo(Order, {foreignKey: "orderId"})
-Order.hasOne(OrderDetails, {foreignKey: "orderId"})
+Order.hasMany(OrderDetails, {foreignKey: "orderId"})
 
 // userId , productId on cartTable
 Cart.belongsTo(User, {foreignKey : "userId"})

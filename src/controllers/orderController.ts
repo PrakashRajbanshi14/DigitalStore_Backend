@@ -5,6 +5,8 @@ import { PaymentMethod, PaymentStatus } from "../globals/types";
 import Payment from "../database/models/paymentModel";
 import axios from "axios"
 import Cart from "../database/models/cartModel";
+import Product from "../database/models/productModel";
+import Category from "../database/models/categoryModel";
 
 interface Iproduct {
     productId: string,
@@ -32,8 +34,11 @@ class OrderController {
             })
             return
         }
-        //for orderModel
-
+        
+        const paymentData = await Payment.create({
+            paymentMethod: paymentMethod
+        })
+         let data;
         const orderData = await Order.create({
             phoneNumber,
             addressLine,
@@ -44,11 +49,10 @@ class OrderController {
             email,
             city,
             state,
-            zipCode
+            zipCode,
+            paymentId : paymentData.id
         })
 
-        // for orderDetails - use for...of to handle async/await properly
-        let data;
         for (const product of products) {
             data = await OrderDetails.create({
                 quantity: product.productQty,
@@ -63,13 +67,8 @@ class OrderController {
                 }
             })
         }
-        const paymentData = await Payment.create({
-            orderId: orderData.id,
-            paymentMethod: paymentMethod
-        })
-
+       
         if (paymentMethod === PaymentMethod.Khalti) {
-
             // khalti logic for test integration
             const data = {
                 return_url: "http://localhost:5173/",
@@ -140,6 +139,70 @@ class OrderController {
             })
         }
     }
+
+     async fetchMyOrders(req:OrderRequest,res:Response):Promise<void>{
+      const userId = req.user?.id 
+      const orders = await Order.findAll({
+        where : {
+          userId
+        }, 
+        attributes : ["totalAmount","id","orderStatus"], 
+        include : {
+          model : Payment, 
+          attributes : ["paymentMethod", "paymentStatus"]
+        }
+      })
+      if(orders.length > 0){
+        res.status(200).json({
+          message : "Order fetched successfully", 
+          data : orders 
+        })
+      }else{
+        res.status(404).json({
+          message : "No order found", 
+          data : []
+        })
+      }
+    }
+
+    async fetchMyOrderDetail(req:OrderRequest,res:Response):Promise<void>{
+      const orderId = req.params.id 
+      const orders = await OrderDetails.findAll({
+        where : {
+          orderId, 
+
+        }, 
+        include : [{
+          model : Order , 
+          include : [
+            {
+              model : Payment, 
+              attributes : ["paymentMethod","paymentStatus"]
+            }
+          ],
+          attributes : ["orderStatus","addressLine","city","state","totalAmount","phoneNumber"]
+        },{
+          model : Product, 
+          include : [{
+            model : Category
+          }], 
+          attributes : ["productImageUrl","productName","productPrice"]
+        }]
+      })
+      if(orders.length > 0){
+        res.status(200).json({
+          message : "Order fetched successfully", 
+          data : orders 
+        })
+      }else{
+        res.status(404).json({
+          message : "No order found", 
+          data : []
+        })
+      }
+    }
+
 }
+
 
 export default new OrderController
